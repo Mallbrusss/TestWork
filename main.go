@@ -16,6 +16,18 @@ type Site struct {
 	Availability sync.RWMutex
 }
 
+var requestCountMap = map[string]int{
+	"/access-time":     0,
+	"/min-access-time": 0,
+	"/max-access-time": 0,
+}
+
+func RequestCount(endpoint string) {
+	if count, ok := requestCountMap[endpoint]; ok {
+		requestCountMap[endpoint] = count + 1
+	}
+}
+
 func MonitorSites(sites []*Site, wg *sync.WaitGroup) {
 	defer wg.Done()
 
@@ -40,6 +52,7 @@ func MonitorSites(sites []*Site, wg *sync.WaitGroup) {
 }
 
 func GetUserAccessTime(w http.ResponseWriter, r *http.Request, sites []*Site) {
+	RequestCount("/access-time")
 	siteName := r.URL.Query().Get("site")
 
 	for _, site := range sites {
@@ -48,7 +61,7 @@ func GetUserAccessTime(w http.ResponseWriter, r *http.Request, sites []*Site) {
 			lastTime := site.LastTime
 			site.Availability.RUnlock()
 
-			fmt.Fprintf(w, lastTime.String())
+			fmt.Fprint(w, lastTime.String())
 			return
 		}
 	}
@@ -57,6 +70,7 @@ func GetUserAccessTime(w http.ResponseWriter, r *http.Request, sites []*Site) {
 }
 
 func GetSiteWithMinAccessTime(w http.ResponseWriter, r *http.Request, sites []*Site) {
+	RequestCount("/min-access-time")
 	if len(sites) == 0 {
 		http.Error(w, "No sites available", http.StatusNotFound)
 		return
@@ -82,6 +96,7 @@ func GetSiteWithMinAccessTime(w http.ResponseWriter, r *http.Request, sites []*S
 }
 
 func GetSiteWithMaxAccessTime(w http.ResponseWriter, r *http.Request, sites []*Site) {
+	RequestCount("/max-access-time")
 	if len(sites) == 0 {
 		http.Error(w, "No sites available", http.StatusNotFound)
 		return
@@ -104,6 +119,19 @@ func GetSiteWithMaxAccessTime(w http.ResponseWriter, r *http.Request, sites []*S
 	}
 
 	fmt.Fprintf(w, maxSite.Name)
+}
+
+func ShowRequestCounts(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html")
+	fmt.Fprintf(w, "<h1>Request Counts</h1>")
+	for endpoint, count := range requestCountMap {
+		fmt.Fprintf(w, "<p>%s: %d</p>", endpoint, count)
+	}
+}
+
+func ShowAdminPage(w http.ResponseWriter, r *http.Request) {
+    // Serve the admin.html file
+    http.ServeFile(w, r, "admins.html")
 }
 
 func main() {
@@ -176,9 +204,13 @@ func main() {
 		GetSiteWithMaxAccessTime(w, r, sites)
 	})
 
-
+	http.HandleFunc("/request-counts", ShowRequestCounts)
+    
 	fs := http.FileServer(http.Dir("./static"))
 	http.Handle("/", fs)
+
+	http.HandleFunc("admins", ShowAdminPage)
+	
 
 	log.Println("Server started on http://localhost:8080")
 	_ = http.ListenAndServe(":8080", nil)

@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin Page</title>
+    <script>
+        function getRequestCounts() {
+            fetch("/request-counts")
+                .then(response => response.text())
+                .then(html => {
+                    document.getElementById("requestCounts").innerHTML = html;
+                })
+                .catch(error => {
+                    console.log(error);
+                });
+        }
+    </script>
+</head>
+<body>
+    <h1>Admin Page</h1>
+    
+    <h2>Request Counts</h2>
+    <button onclick="getRequestCounts()">Get Request Counts</button>
+    <div id="requestCounts"></div>
+</body>
+</html>
