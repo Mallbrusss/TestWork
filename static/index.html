@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Site Availability</title>
+    <script>
+        function getAccessTime() {
+            var siteName = document.getElementById("siteName").value;
+            
+            fetch("/access-time?site=" + encodeURIComponent(siteName))
+                .then(response => response.text())
+                .then(accessTime => {
+                    document.getElementById("accessTimeResult").innerHTML = "Access time for " + siteName + ": " + accessTime;
+                })
+                .catch(error => {
+                    console.log(error);
+                });
+        }
+
+        function getMinAccessTime() {
+            fetch("/min-access-time")
+                .then(response => response.text())
+                .then(siteName => {
+                    document.getElementById("minAccessTimeResult").innerHTML = "Site with minimum access time: " + siteName;
+                })
+                .catch(error => {
+                    console.log(error);
+                });
+        }
+
+        function getMaxAccessTime() {
+            fetch("/max-access-time")
+                .then(response => response.text())
+                .then(siteName => {
+                    document.getElementById("maxAccessTimeResult").innerHTML = "Site with maximum access time: " + siteName;
+                })
+                .catch(error => {
+                    console.log(error);
+                });
+        }
+    </script>
+</head>
+<body>
+    <h1>Site Availability</h1>
+
+    <h2>Get Access Time</h2>
+    <label for="siteName">Site Name:</label>
+    <input type="text" id="siteName">
+    <button onclick="getAccessTime()">Get Access Time</button>
+    <p id="accessTimeResult"></p>
+
+    <h2>Site Statistics</h2>
+    <button onclick="getMinAccessTime()">Get Site with Minimum Access Time</button>
+    <p id="minAccessTimeResult"></p>
+
+    <button onclick="getMaxAccessTime()">Get Site with Maximum Access Time</button>
+    <p id="maxAccessTimeResult"></p>
+</body>
+</html>
