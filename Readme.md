@@ -18,7 +18,7 @@ git clone <https://github.com/Mallbrusss/TestWork.git>
 
 2. Navigate to the project directory:
 
-cd /rootStorageOfProject
+cd /root/storage/of/Project
 
 
 3. Customize the website list (optional):
