@@ -85,7 +85,7 @@ func GetSiteWithMinAccessTime(w http.ResponseWriter, r *http.Request, sites []*t
 		}
 	}
 	fmt.Fprint(w, minSite.Name)
-	
+
 }
 
 func GetSiteWithMaxAccessTime(w http.ResponseWriter, r *http.Request, sites []*tw.Site) {
