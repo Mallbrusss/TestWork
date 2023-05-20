@@ -35,6 +35,7 @@ func main() {
 	http.Handle("/", fs)
 
 	log.Println("Server started on http://localhost:8080")
+	log.Println("---------------------------------------")
 	_ = http.ListenAndServe(":8080", nil)
 
 	wg.Wait()
