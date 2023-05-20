@@ -2,6 +2,7 @@ package requestslogic
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"sync"
 	"time"
@@ -15,33 +16,51 @@ var requestCountMap = map[string]int{
 	"/max-access-time": 0,
 }
 
+var requestCountLock sync.Mutex
+
 func RequestCount(endpoint string) {
-	if count, ok := requestCountMap[endpoint]; ok {
-		requestCountMap[endpoint] = count + 1
-	}
+	requestCountLock.Lock()
+	defer requestCountLock.Unlock()
+
+	requestCountMap[endpoint]++
 }
 
 func MonitorSites(sites []*tw.Site, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	for {
-		for _, site := range sites {
-			go func(site *tw.Site) {
-				resp, err := http.Head(site.URL)
-				available := false
-				if err == nil && resp.StatusCode == http.StatusOK {
-					available = true
-				}
+		var wgSites sync.WaitGroup
 
-				site.Availability.Lock()
-				site.IsAvailable = available
-				site.LastTime = time.Now()
-				site.Availability.Unlock()
-			}(site)
+		for _, site := range sites {
+			wgSites.Add(1)
+			go checkSiteAvailability(site, &wgSites)
 		}
+
+		wgSites.Wait()
 
 		time.Sleep(time.Minute)
 	}
+}
+
+func checkSiteAvailability(site *tw.Site, wg *sync.WaitGroup) {
+	defer wg.Done()
+
+	start := time.Now()
+	resp, err := http.Get(site.URL)
+	elapsed := time.Since(start).Milliseconds()
+
+	available := false
+	if err == nil && resp.StatusCode == http.StatusOK {
+		available = true
+	}
+
+	site.Availability.Lock()
+	site.IsAvailable = available
+	site.LastTime = time.Now()
+	site.ResponseTime = elapsed
+	site.Availability.Unlock()
+
+	log.Printf("Website: %s, Response Time: %d ms", site.Name, elapsed)
 }
 
 func GetUserAccessTime(w http.ResponseWriter, r *http.Request, sites []*tw.Site) {
@@ -54,8 +73,9 @@ func GetUserAccessTime(w http.ResponseWriter, r *http.Request, sites []*tw.Site)
 			lastTime := site.LastTime
 			site.Availability.RUnlock()
 
-			fmt.Fprint(w, lastTime.String())
+			fmt.Fprintf(w, "Last Time: %s, Response Time: %d ms", lastTime.String(), site.ResponseTime)
 			return
+			
 		}
 	}
 
@@ -85,7 +105,6 @@ func GetSiteWithMinAccessTime(w http.ResponseWriter, r *http.Request, sites []*t
 		}
 	}
 	fmt.Fprint(w, minSite.Name)
-
 }
 
 func GetSiteWithMaxAccessTime(w http.ResponseWriter, r *http.Request, sites []*tw.Site) {
@@ -115,8 +134,12 @@ func GetSiteWithMaxAccessTime(w http.ResponseWriter, r *http.Request, sites []*t
 }
 
 func ShowRequestCounts(w http.ResponseWriter, r *http.Request) {
+	requestCountLock.Lock()
+	defer requestCountLock.Unlock()
+
 	w.Header().Set("Content-Type", "text/html")
 	for endpoint, count := range requestCountMap {
 		fmt.Fprintf(w, "<p>%s: %d</p>", endpoint, count)
+		time.Sleep(time.Minute)
 	}
 }

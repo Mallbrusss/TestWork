@@ -11,6 +11,7 @@ type Site struct {
 	LastTime     time.Time
 	IsAvailable  bool
 	Availability sync.RWMutex
+	ResponseTime int64
 }
 
 var Sites = []*Site{
