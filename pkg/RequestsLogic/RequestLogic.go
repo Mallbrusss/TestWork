@@ -140,6 +140,5 @@ func ShowRequestCounts(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
 	for endpoint, count := range requestCountMap {
 		fmt.Fprintf(w, "<p>%s: %d</p>", endpoint, count)
-		time.Sleep(time.Minute)
 	}
 }
